@@ -21,7 +21,7 @@
             range: 'Sheet1!A:G' // Range dos dados
         };
 
-        function TeacherSchedulingSystem() {
+       function TeacherSchedulingSystem() {
           const subjects = {
             "Língua Portuguesa e Redação": {
               icon: "📚",
@@ -54,16 +54,88 @@
                 { id: 13, name: "Profª. Tarine", turmas: ["Ciências: 5º anos"] }
               ]
             },
+            "Espanhol": {
+              icon: "🇪🇸",
+              color: "red",
+              teachers: [
+                { id: 14, name: "Profª. Michelle", turmas: ["6º ao 9º anos"] }
+               ]
+            },
             "Inglês": {
-              icon: "🔤",
+              icon: "🔤",              
               color: "indigo",
               teachers: [
                 { id: 15, name: "Profª Bianca", turmas: ["EF2 - Tarde"] },
                 { id: 16, name: "Profª Giane", turmas: ["EM"] },
-                { id: 17, name: "Prof. Leonardo", turmas: ["9º anos", "EM"] }
+                { id: 17, name: "Prof. Leonardo", turmas: ["9º anos", "EM"] },
+                { id: 18, name: "Prof. Everton", turmas: ["EM"] },
+                { id: 19, name: "Prof. Patrick", turmas: ["EM"] },
+                { id: 20, name: "Profª Regina", turmas: ["EM"] },
+                { id: 21, name: "Profª Gisele", turmas: ["EM"] },
+              ]
+            },
+            "História/Filosofia/Sociologia": {
+              icon: "🏛️",
+              color: "yellow",
+              teachers: [
+                { id: 22, name: "Prof. Cristiane", turmas: ["História e Geografia: 5º anos", "História: 6º - Manhã", "Ensino Religioso"] },
+                { id: 23, name: "Prof. Bruno Segatto", turmas: ["História - EM", "Filosofia - EM", "Sociologia - EM"] },
+                { id: 24, name: "Prof. Guilherme", turmas: ["História: 6º, 7º e 8º - Tarde", "Filosofia: 8º - Tarde"] },
+                { id: 25, name: "Profª. Isadora", turmas: ["História - 7º, 8º - Manhã, 9º anos", "Filosofia: 8º - Manhã e 9º anos"] }
+              ]
+            },
+            "Geografia": {
+              icon: "🌍",
+              color: "teal",
+              teachers: [
+                { id: 26, name: "Prof. Dillian", turmas: ["6º ao 9º - EF", "EM"] }
+              ]
+            },
+            "Educação Física": {
+              icon: "⚽",
+              color: "orange",
+              teachers: [
+                { id: 27, name: "Prof. Ana Carolina", turmas: ["5º ao 9º anos", "EM"] },
+                { id: 28, name: "Prof. Fabiani", turmas: ["7º ao 9º anos- Manhã"] }
+              ]
+            },
+            "Artes": {
+              icon: "🎨",
+              color: "pink",
+              teachers: [
+                { id: 29, name: "Prof. Bruno Teixeira", turmas: ["5º e 6º anos - EF", "1ª séries - EM"] },
+                { id: 30, name: "Prof. Marcelo", turmas: ["Teatro", "7º ao 9º anos - EF", "2ª séries - EM"] }
+              ]
+            },
+            "Educação Tecnológica": {
+              icon: "💻",
+              color: "gray",
+              teachers: [
+                { id: 31, name: "Prof. Alexandre", turmas: ["5º ao 8º anos"] }
+              ]
+            },
+            "Biologia": {
+              icon: "🧬",
+              color: "green",
+              teachers: [
+                { id: 32, name: "Prof. Adir", turmas: ["EM"] }
+              ]
+            },
+            "Literatura": {
+              icon: "📖",
+              color: "purple",
+              teachers: [
+                { id: 33, name: "Profª. Alexandra", turmas: ["EM"] }
+              ]
+            },
+            "Física": {
+              icon: "⚛️",
+              color: "blue",
+              teachers: [
+                { id: 34, name: "Prof. Daniel", turmas: ["2ª e 3ª séries - EM"] },
+                { id: 35, name: "Profª. Rose", turmas: ["1ª séries - EM"] }
               ]
             }
-            // Adicione outras disciplinas conforme necessário
           };
 
           const generateTimeSlots = () => {
@@ -95,7 +167,6 @@
           const [teacherBookings, setTeacherBookings] = useState(new Map());
           const [message, setMessage] = useState("");
           const [messageType, setMessageType] = useState("");
-          const [isLoading, setIsLoading] = useState(false);
           const [isAdminMode, setIsAdminMode] = useState(false);
           const [adminPassword, setAdminPassword] = useState("");
 
@@ -103,6 +174,672 @@
           const [studentName, setStudentName] = useState("");
           const [email, setEmail] = useState("");
           const [selectedSlot, setSelectedSlot] = useState("");
+
+          const showMessage = (text, type) => {
+            setMessage(text);
+            setMessageType(type);
+            setTimeout(() => {
+              setMessage("");
+              setMessageType("");
+            }, 4000);
+          };
+
+          const getTeacherBookings = (teacherId) => {
+            return teacherBookings.get(teacherId) || new Map();
+          };
+
+          const getBookedSlots = (teacherId) => {
+            const bookings = getTeacherBookings(teacherId);
+            return new Set(Array.from(bookings.keys()));
+          };
+
+          const isSlotAvailable = (slot, teacherId) => {
+            const bookedSlots = getBookedSlots(teacherId);
+            return !bookedSlots.has(slot);
+          };
+
+          const goToAdmin = () => setCurrentScreen("admin");
+          const goToSubjects = () => setCurrentScreen("subjects");
+          
+          const goToTeachers = (subject) => {
+            setSelectedSubject(subject);
+            setCurrentScreen("teachers");
+          };
+
+          const goToBooking = (teacher) => {
+            setSelectedTeacher(teacher);
+            setCurrentScreen("booking");
+            setParentName("");
+            setStudentName("");
+            setEmail("");
+            setSelectedSlot("");
+            setMessage("");
+            setMessageType("");
+          };
+
+          const goBack = () => {
+            if (currentScreen === "booking") {
+              setCurrentScreen("teachers");
+            } else if (currentScreen === "teachers") {
+              setCurrentScreen("subjects");
+            } else if (currentScreen === "subjects") {
+              setCurrentScreen("home");
+            }
+          };
+
+          const handleAdminLogin = () => {
+            if (adminPassword === "admin123") {
+              setIsAdminMode(true);
+              setCurrentScreen("adminPanel");
+              setAdminPassword("");
+              showMessage("Acesso administrativo concedido!", "success");
+            } else {
+              showMessage("Senha incorreta. Acesso negado.", "error");
+              setAdminPassword("");
+            }
+          };
+
+          const handleBooking = () => {
+            const teacherId = selectedTeacher?.id;
+            
+            if (!teacherId) return;
+            
+            if (!parentName.trim()) {
+              showMessage("Por favor, insira o nome do responsável.", "error");
+              return;
+            }
+
+            if (!studentName.trim()) {
+              showMessage("Por favor, insira o nome do estudante.", "error");
+              return;
+            }
+
+            if (!email.trim()) {
+              showMessage("Por favor, insira o email para contato.", "error");
+              return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              showMessage("Por favor, insira um email válido.", "error");
+              return;
+            }
+
+            if (!selectedSlot) {
+              showMessage("Por favor, selecione um horário.", "error");
+              return;
+            }
+
+            const currentBookings = getTeacherBookings(teacherId);
+            const existingBooking = Array.from(currentBookings.values()).find(booking => 
+              booking.email.toLowerCase() === email.toLowerCase()
+            );
+            
+            if (existingBooking) {
+              showMessage(`Este email já tem um agendamento às ${existingBooking.time} para o estudante ${existingBooking.studentName} com ${selectedTeacher.name}.`, "error");
+              return;
+            }
+
+            if (!isSlotAvailable(selectedSlot, teacherId)) {
+              showMessage("Este horário não está mais disponível. Selecione outro.", "error");
+              return;
+            }
+
+            const bookingData = {
+              parentName: parentName.trim(),
+              studentName: studentName.trim(),
+              email: email.trim().toLowerCase(),
+              time: selectedSlot,
+              bookingDate: new Date().toLocaleDateString('pt-BR'),
+              teacher: selectedTeacher.name,
+              subject: selectedSubject
+            };
+
+            const updatedBookings = new Map([...currentBookings, [selectedSlot, bookingData]]);
+            setTeacherBookings(prev => new Map([...prev, [teacherId, updatedBookings]]));
+            
+            showMessage(`Agendamento confirmado! ${parentName} agendou às ${selectedSlot} para o estudante ${studentName} com ${selectedTeacher.name}.`, "success");
+            
+            setParentName("");
+            setStudentName("");
+            setEmail("");
+            setSelectedSlot("");
+          };
+
+          const exportAllBookings = () => {
+            const worksheetData = [
+              ['Professor', 'Disciplina', 'Nome do Responsável', 'Nome do Estudante', 'Email', 'Horário', 'Data de Agendamento']
+            ];
+            
+            Array.from(teacherBookings.entries()).forEach(([teacherId, bookings]) => {
+              Array.from(bookings.values()).forEach((booking) => {
+                worksheetData.push([
+                  booking.teacher,
+                  booking.subject,
+                  booking.parentName,
+                  booking.studentName,
+                  booking.email,
+                  booking.time,
+                  booking.bookingDate
+                ]);
+              });
+            });
+
+            const csvContent = worksheetData.map(row => 
+              row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `todos_agendamentos_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage('Relatório completo exportado com sucesso!', 'success');
+          };
+
+          const exportTeacherBookings = (teacherId, teacherName) => {
+            const worksheetData = [
+              ['Professor', 'Disciplina', 'Nome do Responsável', 'Nome do Estudante', 'Email', 'Horário', 'Data de Agendamento']
+            ];
+            
+            const bookings = getTeacherBookings(teacherId);
+            Array.from(bookings.values()).forEach((booking) => {
+              worksheetData.push([
+                booking.teacher,
+                booking.subject,
+                booking.parentName,
+                booking.studentName,
+                booking.email,
+                booking.time,
+                booking.bookingDate
+              ]);
+            });
+
+            const csvContent = worksheetData.map(row => 
+              row.map(cell => `"${cell}"`).join(',')
+            ).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `agendamentos_${teacherName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showMessage(`Agendamentos de ${teacherName} exportados!`, 'success');
+          };
+
+          // HOME SCREEN
+          if (currentScreen === "home") {
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6" },
+              React.createElement('div', { className: "max-w-6xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8 text-center" },
+                  React.createElement('div', { className: "mb-8" },
+                    React.createElement('div', { className: "text-6xl mb-4" }, "🎓"),
+                    React.createElement('h1', { className: "text-4xl font-bold text-gray-800 mb-4" }, "Sistema de Agendamento"),
+                    React.createElement('p', { className: "text-xl text-gray-600 mb-2" }, "Reuniões Pedagógicas com Professores"),
+                    React.createElement('p', { className: "text-gray-500" }, "Horários disponíveis: 18:30 às 19:50 (intervalos de 10 minutos)")
+                  ),
+                  React.createElement('div', { className: "flex gap-4 justify-center mb-8" },
+                    React.createElement('button', {
+                      onClick: goToSubjects,
+                      className: "px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium"
+                    }, "Começar Agendamento"),
+                    React.createElement('button', {
+                      onClick: goToAdmin,
+                      className: "px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-lg font-medium"
+                    }, "⚙️ Área Administrativa")
+                  ),
+                  React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                    Object.entries(subjects).map(([subject, data]) => 
+                      React.createElement('div', { 
+                        key: subject, 
+                        className: "bg-gray-50 rounded-lg p-4" 
+                      },
+                        React.createElement('div', { className: "text-2xl mb-2 text-center" }, data.icon),
+                        React.createElement('h3', { className: "text-sm font-semibold text-gray-800 mb-1 text-center" }, subject),
+                        React.createElement('p', { className: "text-gray-600 text-xs text-center" }, `${data.teachers.length} prof(s)`)
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+
+          // SUBJECTS SCREEN
+          if (currentScreen === "subjects") {
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6" },
+              React.createElement('div', { className: "max-w-6xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
+                  React.createElement('div', { className: "flex items-center mb-8" },
+                    React.createElement('button', {
+                      onClick: goBack,
+                      className: "mr-4 p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    }, "← Voltar"),
+                    React.createElement('h1', { className: "text-3xl font-bold text-gray-800" }, "Selecione a Disciplina")
+                  ),
+                  React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                    Object.entries(subjects).map(([subject, data]) =>
+                      React.createElement('button', {
+                        key: subject,
+                        onClick: () => goToTeachers(subject),
+                        className: "bg-blue-50 border-2 border-blue-200 rounded-xl p-4 hover:bg-blue-100 transition-colors text-left"
+                      },
+                        React.createElement('div', { className: "text-3xl mb-2" }, data.icon),
+                        React.createElement('h2', { className: "text-lg font-bold text-gray-800 mb-1" }, subject),
+                        React.createElement('p', { className: "text-gray-600 text-sm mb-2" }, `${data.teachers.length} professores`),
+                        React.createElement('div', { className: "text-xs text-gray-500" }, 
+                          data.teachers.slice(0, 2).map(teacher => teacher.name.split(' ')[1]).join(', ') +
+                          (data.teachers.length > 2 ? '...' : '')
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+
+          // TEACHERS SCREEN
+          if (currentScreen === "teachers") {
+            const subjectData = subjects[selectedSubject];
+            
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6" },
+              React.createElement('div', { className: "max-w-6xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
+                  React.createElement('div', { className: "flex items-center mb-8" },
+                    React.createElement('button', {
+                      onClick: goBack,
+                      className: "mr-4 p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    }, "← Voltar"),
+                    React.createElement('div', { className: "text-2xl mr-3" }, subjectData.icon),
+                    React.createElement('h1', { className: "text-3xl font-bold text-gray-800" }, selectedSubject)
+                  ),
+                  React.createElement('p', { className: "text-gray-600 mb-8" }, "Selecione o professor com quem deseja agendar:"),
+                  React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" },
+                    subjectData.teachers.map((teacher) => {
+                      const bookingCount = getTeacherBookings(teacher.id).size;
+                      const availableSlots = timeSlots.length - bookingCount;
+                      
+                      return React.createElement('button', {
+                        key: teacher.id,
+                        onClick: () => goToBooking(teacher),
+                        className: "bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-lg transition-all text-left"
+                      },
+                        React.createElement('div', { className: "flex items-center mb-3" },
+                          React.createElement('div', { className: "text-2xl mr-2" }, "👨‍🏫"),
+                          React.createElement('div', {},
+                            React.createElement('h3', { className: "text-base font-bold text-gray-800" }, teacher.name),
+                            React.createElement('div', { className: "flex items-center text-xs text-gray-500" },
+                              "🕒 ",
+                              availableSlots,
+                              " disponíveis"
+                            )
+                          )
+                        ),
+                        React.createElement('div', { className: "mb-3" },
+                          React.createElement('p', { className: "text-xs text-gray-600 mb-1" }, "Turmas atendidas:"),
+                          React.createElement('div', { className: "flex flex-wrap gap-1" },
+                            teacher.turmas.slice(0, 3).map((specialty, index) =>
+                              React.createElement('span', {
+                                key: index,
+                                className: "px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                              }, specialty)
+                            ),
+                            teacher.turmas.length > 3 && React.createElement('span', {
+                              className: "px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                            }, `+${teacher.turmas.length - 3}`)
+                          )
+                        ),
+                        bookingCount > 0 && React.createElement('div', {
+                          className: "text-xs text-green-600 font-medium"
+                        }, `${bookingCount} agendamento(s) confirmado(s)`)
+                      );
+                    })
+                  )
+                )
+              )
+            );
+          }
+
+          // ADMIN LOGIN SCREEN
+          if (currentScreen === "admin") {
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6" },
+              React.createElement('div', { className: "max-w-md mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
+                  React.createElement('div', { className: "flex items-center mb-8" },
+                    React.createElement('button', {
+                      onClick: () => setCurrentScreen("home"),
+                      className: "mr-4 p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    }, "← Voltar"),
+                    React.createElement('div', { className: "flex-1 text-center" },
+                      React.createElement('div', { className: "text-4xl mb-3" }, "🛡️"),
+                      React.createElement('h1', { className: "text-2xl font-bold text-gray-800" }, "Área Administrativa")
+                    )
+                  ),
+                  React.createElement('div', { className: "mb-6" },
+                    React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, "Senha de Acesso"),
+                    React.createElement('input', {
+                      type: "password",
+                      value: adminPassword,
+                      onChange: (e) => setAdminPassword(e.target.value),
+                      onKeyPress: (e) => e.key === 'Enter' && handleAdminLogin(),
+                      placeholder: "Digite a senha administrativa",
+                      className: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    })
+                  ),
+                  React.createElement('button', {
+                    onClick: handleAdminLogin,
+                    className: "w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  }, "Acessar Painel Administrativo"),
+                  message && React.createElement('div', {
+                    className: `mt-4 p-3 rounded-lg flex items-center text-sm ${
+                      messageType === 'success' 
+                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`
+                  }, message)
+                )
+              )
+            );
+          }
+
+          // ADMIN PANEL SCREEN
+          if (currentScreen === "adminPanel") {
+            const totalBookings = Array.from(teacherBookings.values()).reduce((total, bookings) => total + bookings.size, 0);
+            
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6" },
+              React.createElement('div', { className: "max-w-6xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
+                  React.createElement('div', { className: "flex items-center justify-between mb-8" },
+                    React.createElement('div', { className: "flex items-center" },
+                      React.createElement('button', {
+                        onClick: () => {
+                          setCurrentScreen("home");
+                          setIsAdminMode(false);
+                        },
+                        className: "mr-4 p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                      }, "← Voltar"),
+                      React.createElement('div', {},
+                        React.createElement('h1', { className: "text-3xl font-bold text-gray-800" }, "Painel Administrativo"),
+                        React.createElement('p', { className: "text-gray-600" }, "Gerenciar todos os agendamentos")
+                      )
+                    ),
+                    React.createElement('button', {
+                      onClick: exportAllBookings,
+                      className: "flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    }, "💾 Exportar Todos")
+                  ),
+                  React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" },
+                    React.createElement('div', { className: "bg-blue-50 rounded-lg p-6 text-center" },
+                      React.createElement('div', { className: "text-3xl font-bold text-blue-600" }, totalBookings),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Total de Agendamentos")
+                    ),
+                    React.createElement('div', { className: "bg-green-50 rounded-lg p-6 text-center" },
+                      React.createElement('div', { className: "text-3xl font-bold text-green-600" }, teacherBookings.size),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Professores com Agendamentos")
+                    ),
+                    React.createElement('div', { className: "bg-purple-50 rounded-lg p-6 text-center" },
+                      React.createElement('div', { className: "text-3xl font-bold text-purple-600" }, Object.keys(subjects).length),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Disciplinas")
+                    ),
+                    React.createElement('div', { className: "bg-orange-50 rounded-lg p-6 text-center" },
+                      React.createElement('div', { className: "text-3xl font-bold text-orange-600" }, timeSlots.length),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Horários por Professor")
+                    )
+                  ),
+                  React.createElement('div', {},
+                    React.createElement('h2', { className: "text-2xl font-bold text-gray-800 mb-6" }, "Agendamentos por Professor"),
+                    teacherBookings.size === 0 ? 
+                      React.createElement('div', { className: "text-center py-12" },
+                        React.createElement('div', { className: "text-6xl mb-4" }, "⏰"),
+                        React.createElement('h3', { className: "text-lg font-medium text-gray-500 mb-2" }, "Nenhum agendamento ainda"),
+                        React.createElement('p', { className: "text-gray-400" }, "Os agendamentos aparecerão aqui conforme forem sendo realizados")
+                      ) :
+                      React.createElement('div', { className: "space-y-6" },
+                        Array.from(teacherBookings.entries()).map(([teacherId, bookings]) => {
+                          let teacher = null;
+                          let subject = null;
+                          
+                          Object.entries(subjects).forEach(([subjectName, subjectData]) => {
+                            const foundTeacher = subjectData.teachers.find(t => t.id === teacherId);
+                            if (foundTeacher) {
+                              teacher = foundTeacher;
+                              subject = subjectName;
+                            }
+                          });
+
+                          if (!teacher) return null;
+
+                          return React.createElement('div', { 
+                            key: teacherId, 
+                            className: "bg-gray-50 rounded-lg p-6" 
+                          },
+                            React.createElement('div', { className: "flex items-center justify-between mb-4" },
+                              React.createElement('div', {},
+                                React.createElement('h3', { className: "text-xl font-bold text-gray-800" }, teacher.name),
+                                React.createElement('p', { className: "text-gray-600" }, `${subject} • ${bookings.size} agendamento(s)`)
+                              ),
+                              React.createElement('button', {
+                                onClick: () => exportTeacherBookings(teacherId, teacher.name),
+                                className: "flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                              }, "💾 Exportar")
+                            ),
+                            React.createElement('div', { className: "overflow-x-auto" },
+                              React.createElement('table', { className: "w-full bg-white rounded-lg overflow-hidden" },
+                                React.createElement('thead', { className: "bg-blue-50" },
+                                  React.createElement('tr', {},
+                                    React.createElement('th', { className: "px-4 py-3 text-left text-sm font-medium text-gray-700" }, "Responsável"),
+                                    React.createElement('th', { className: "px-4 py-3 text-left text-sm font-medium text-gray-700" }, "Estudante"),
+                                    React.createElement('th', { className: "px-4 py-3 text-left text-sm font-medium text-gray-700" }, "Email"),
+                                    React.createElement('th', { className: "px-4 py-3 text-left text-sm font-medium text-gray-700" }, "Horário"),
+                                    React.createElement('th', { className: "px-4 py-3 text-left text-sm font-medium text-gray-700" }, "Data")
+                                  )
+                                ),
+                                React.createElement('tbody', {},
+                                  Array.from(bookings.values())
+                                    .sort((a, b) => a.time.localeCompare(b.time))
+                                    .map((booking, index) =>
+                                      React.createElement('tr', { 
+                                        key: `${booking.email}-${booking.time}`, 
+                                        className: "border-t border-gray-100" 
+                                      },
+                                        React.createElement('td', { className: "px-4 py-3 font-medium" }, booking.parentName),
+                                        React.createElement('td', { className: "px-4 py-3 text-blue-600" }, booking.studentName),
+                                        React.createElement('td', { className: "px-4 py-3 text-gray-600 text-sm" }, booking.email),
+                                        React.createElement('td', { className: "px-4 py-3 font-medium" }, booking.time),
+                                        React.createElement('td', { className: "px-4 py-3 text-gray-600 text-sm" }, booking.bookingDate)
+                                      )
+                                    )
+                                )
+                              )
+                            )
+                          );
+                        })
+                      )
+                  ),
+                  message && React.createElement('div', {
+                    className: `mt-6 p-4 rounded-lg flex items-center ${
+                      messageType === 'success' 
+                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`
+                  }, message)
+                )
+              )
+            );
+          }
+
+          // BOOKING SCREEN
+          if (currentScreen === "booking") {
+            const teacherBookings = getTeacherBookings(selectedTeacher.id);
+            const bookedSlots = getBookedSlots(selectedTeacher.id);
+            
+            const existingBooking = email ? Array.from(teacherBookings.values()).find(booking => 
+              booking.email.toLowerCase() === email.toLowerCase()
+            ) : null;
+            
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6" },
+              React.createElement('div', { className: "max-w-4xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8" },
+                  React.createElement('div', { className: "flex items-center mb-8" },
+                    React.createElement('button', {
+                      onClick: goBack,
+                      className: "mr-4 p-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    }, "← Voltar"),
+                    React.createElement('div', { className: "flex-1" },
+                      React.createElement('div', { className: "flex items-center mb-2" },
+                        React.createElement('div', { className: "text-2xl mr-3" }, "👨‍🏫"),
+                        React.createElement('h1', { className: "text-3xl font-bold text-gray-800" }, selectedTeacher.name)
+                      ),
+                      React.createElement('div', { className: "flex items-center text-gray-600" },
+                        React.createElement('span', { className: "mr-4" }, `📚 ${selectedSubject}`),
+                        React.createElement('span', {}, "🕒 18:30 às 19:50 (10min cada)")
+                      ),
+                      React.createElement('div', { className: "mt-2 flex flex-wrap gap-2" },
+                        selectedTeacher.turmas.map((specialty, index) =>
+                          React.createElement('span', {
+                            key: index,
+                            className: "px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
+                          }, specialty)
+                        )
+                      )
+                    )
+                  ),
+                  React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" },
+                    React.createElement('div', { className: "bg-blue-50 rounded-lg p-4 text-center" },
+                      React.createElement('div', { className: "text-2xl font-bold text-blue-600" }, timeSlots.length),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Total de Horários")
+                    ),
+                    React.createElement('div', { className: "bg-green-50 rounded-lg p-4 text-center" },
+                      React.createElement('div', { className: "text-2xl font-bold text-green-600" }, timeSlots.length - bookedSlots.size),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Disponíveis")
+                    ),
+                    React.createElement('div', { className: "bg-red-50 rounded-lg p-4 text-center" },
+                      React.createElement('div', { className: "text-2xl font-bold text-red-600" }, bookedSlots.size),
+                      React.createElement('div', { className: "text-sm text-gray-600" }, "Agendados")
+                    )
+                  ),
+                  React.createElement('div', { className: "bg-gray-50 rounded-lg p-6 mb-8" },
+                    React.createElement('h2', { className: "text-xl font-semibold mb-4 flex items-center" },
+                      "⏰ Fazer Agendamento"
+                    ),
+                    React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" },
+                      React.createElement('div', {},
+                        React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, "Nome do Responsável *"),
+                        React.createElement('input', {
+                          type: "text",
+                          value: parentName,
+                          onChange: (e) => setParentName(e.target.value),
+                          placeholder: "Nome completo do responsável",
+                          className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        })
+                      ),
+                      React.createElement('div', {},
+                        React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, "Nome do Estudante *"),
+                        React.createElement('input', {
+                          type: "text",
+                          value: studentName,
+                          onChange: (e) => setStudentName(e.target.value),
+                          placeholder: "Nome completo do estudante",
+                          className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        })
+                      )
+                    ),
+                    React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" },
+                      React.createElement('div', {},
+                        React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, "Email para Contato *"),
+                        React.createElement('input', {
+                          type: "email",
+                          value: email,
+                          onChange: (e) => setEmail(e.target.value),
+                          placeholder: "email@exemplo.com",
+                          className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        }),
+                        existingBooking && React.createElement('p', {
+                          className: "text-sm text-amber-600 mt-1"
+                        }, `Este email já tem um agendamento às ${existingBooking.time} para ${existingBooking.studentName}`)
+                      ),
+                      React.createElement('div', {},
+                        React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-2" }, "Horário Desejado *"),
+                        React.createElement('select', {
+                          value: selectedSlot,
+                          onChange: (e) => setSelectedSlot(e.target.value),
+                          className: "w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        },
+                          React.createElement('option', { value: "" }, "Selecione um horário"),
+                          timeSlots.map((slot) =>
+                            React.createElement('option', {
+                              key: slot,
+                              value: slot,
+                              disabled: !isSlotAvailable(slot, selectedTeacher.id)
+                            }, `${slot} ${!isSlotAvailable(slot, selectedTeacher.id) ? "(Ocupado)" : "(Disponível)"}`)
+                          )
+                        )
+                      )
+                    ),
+                    React.createElement('button', {
+                      onClick: handleBooking,
+                      disabled: !parentName.trim() || !studentName.trim() || !email.trim() || !selectedSlot || existingBooking,
+                      className: "w-full md:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium transition-colors"
+                    }, "Confirmar Agendamento"),
+                    React.createElement('p', { className: "text-xs text-gray-500 mt-2" }, "* Campos obrigatórios")
+                  ),
+                  message && React.createElement('div', {
+                    className: `mb-6 p-4 rounded-lg flex items-center ${
+                      messageType === 'success' 
+                        ? 'bg-green-50 text-green-800 border border-green-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`
+                  }, message),
+                  React.createElement('div', { className: "mb-8" },
+                    React.createElement('h3', { className: "text-xl font-semibold mb-4" }, "Horários Disponíveis"),
+                    React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" },
+                      timeSlots.map((slot) => {
+                        const available = isSlotAvailable(slot, selectedTeacher.id);
+                        return React.createElement('div', {
+                          key: slot,
+                          className: `p-3 rounded-lg text-center font-medium border-2 ${
+                            available
+                              ? 'bg-green-50 border-green-200 text-green-800'
+                              : 'bg-red-50 border-red-200 text-red-800'
+                          }`
+                        },
+                          React.createElement('div', { className: "text-lg" }, slot),
+                          React.createElement('div', { className: "text-xs mt-1" }, available ? 'Disponível' : 'Ocupado')
+                        );
+                      })
+                    )
+                  ),
+                  teacherBookings.size === 0 && React.createElement('div', {
+                    className: "mt-8 text-center py-8"
+                  },
+                    React.createElement('div', { className: "text-6xl mb-4" }, "⏰"),
+                    React.createElement('h3', { className: "text-lg font-medium text-gray-500 mb-2" }, "Horários disponíveis para agendamento"),
+                    React.createElement('p', { className: "text-gray-400" }, "Selecione um horário disponível acima")
+                  )
+                )
+              )
+            );
+          }
+
+          return null;
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(TeacherSchedulingSystem));
+    </script>
+</body>
+</html>
 
           // FUNÇÕES DO GOOGLE SHEETS
           const loadBookingsFromSheets = async () => {
@@ -419,4 +1156,5 @@
         root.render(React.createElement(TeacherSchedulingSystem));
     </script>
 </body>
+
 </html>

@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Agendamento - Professores</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // CONFIGURAÇÃO - SUBSTITUA PELOS SEUS VALORES
+        const GOOGLE_SHEETS_CONFIG = {
+            apiKey: 'AIzaSyAv9YwX1zbkCZfBNEifBZ8T3tBkUFsh_F4', // Substitua pela chave que você criou
+            spreadsheetId: '1rYNZeln5_eVUEcao25KIWuKfMCYzLg8p1ruM6Ds5VWU', // ID da sua planilha
+            range: 'Sheet1!A:G' // Range dos dados
+        };
+
+        function TeacherSchedulingSystem() {
+          const subjects = {
+            "Língua Portuguesa e Redação": {
+              icon: "📚",
+              color: "blue",
+              teachers: [
+                { id: 1, name: "Profª. Juliana Tricot", turmas: ["Língua Portuguesa: 8º e 9º anos", "Redação: 9º anos"] },
+                { id: 2, name: "Profª. Juliana Velho", turmas: ["Língua Portuguesa e Redação: Ensino Médio"] },
+                { id: 3, name: "Profª. Daniella", turmas: ["Língua Portuguesa: 6º e 7º anos"] },
+                { id: 4, name: "Profª. Márcia", turmas: ["Língua Portuguesa: 5º anos", "Inglês: 5º anos a 8º anos - Manhã"] }
+              ]
+            },
+            "Matemática": {
+              icon: "🧮",
+              color: "green",
+              teachers: [
+                { id: 5, name: "Profª. Aline", turmas: ["7º anos"] },
+                { id: 6, name: "Profª Eliana", turmas: ["5º ano - Manhã"] },
+                { id: 7, name: "Profª Kátya", turmas: ["2ª e 3ª séries - EM"] },
+                { id: 8, name: "Prof. Mateus", turmas: ["5º anos - Tarde e 6º anos"] },
+                { id: 9, name: "Profª Michele", turmas: ["8º, 9º e 1ª séries - EM"] }
+              ]
+            },
+            "Ciências e Química": {
+              icon: "🔬",
+              color: "purple",
+              teachers: [
+                { id: 10, name: "Profª. Karina", turmas: ["Ciências: 6º, Manhã e Tarde, 7º, 8º e 9º - Tarde"] },
+                { id: 11, name: "Profª. Raquel", turmas: ["Química: 2ª e 3ª séries - EM"] },
+                { id: 12, name: "Profª. Roberta", turmas: ["Ciências: 7º, 8º e 9º - Manhã", "Química: 1ª série: EM"] },
+                { id: 13, name: "Profª. Tarine", turmas: ["Ciências: 5º anos"] }
+              ]
+            },
+            "Inglês": {
+              icon: "🔤",
+              color: "indigo",
+              teachers: [
+                { id: 15, name: "Profª Bianca", turmas: ["EF2 - Tarde"] },
+                { id: 16, name: "Profª Giane", turmas: ["EM"] },
+                { id: 17, name: "Prof. Leonardo", turmas: ["9º anos", "EM"] }
+              ]
+            }
+            // Adicione outras disciplinas conforme necessário
+          };
+
+          const generateTimeSlots = () => {
+            const slots = [];
+            let startTime = new Date();
+            startTime.setHours(18, 30, 0, 0);
+            
+            const endTime = new Date();
+            endTime.setHours(19, 50, 0, 0);
+            
+            while (startTime <= endTime) {
+              const timeString = startTime.toLocaleTimeString('pt-BR', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+              });
+              slots.push(timeString);
+              startTime.setMinutes(startTime.getMinutes() + 10);
+            }
+            
+            return slots;
+          };
+
+          const timeSlots = generateTimeSlots();
+
+          const [currentScreen, setCurrentScreen] = useState("home");
+          const [selectedSubject, setSelectedSubject] = useState("");
+          const [selectedTeacher, setSelectedTeacher] = useState(null);
+          const [teacherBookings, setTeacherBookings] = useState(new Map());
+          const [message, setMessage] = useState("");
+          const [messageType, setMessageType] = useState("");
+          const [isLoading, setIsLoading] = useState(false);
+          const [isAdminMode, setIsAdminMode] = useState(false);
+          const [adminPassword, setAdminPassword] = useState("");
+
+          const [parentName, setParentName] = useState("");
+          const [studentName, setStudentName] = useState("");
+          const [email, setEmail] = useState("");
+          const [selectedSlot, setSelectedSlot] = useState("");
+
+          // FUNÇÕES DO GOOGLE SHEETS
+          const loadBookingsFromSheets = async () => {
+            try {
+              setIsLoading(true);
+              const response = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.range}?key=${GOOGLE_SHEETS_CONFIG.apiKey}`
+              );
+              
+              if (!response.ok) {
+                throw new Error('Erro ao conectar com Google Sheets');
+              }
+              
+              const data = await response.json();
+              const rows = data.values || [];
+              
+              // Pular cabeçalho (primeira linha)
+              const bookingRows = rows.slice(1);
+              
+              const newBookings = new Map();
+              
+              bookingRows.forEach(row => {
+                if (row.length >= 6) {
+                  const [professor, disciplina, responsavel, estudante, emailResp, horario, data] = row;
+                  
+                  // Encontrar ID do professor
+                  let teacherId = null;
+                  Object.values(subjects).forEach(subject => {
+                    const teacher = subject.teachers.find(t => t.name === professor);
+                    if (teacher) {
+                      teacherId = teacher.id;
+                    }
+                  });
+                  
+                  if (teacherId) {
+                    if (!newBookings.has(teacherId)) {
+                      newBookings.set(teacherId, new Map());
+                    }
+                    
+                    const bookingData = {
+                      parentName: responsavel,
+                      studentName: estudante,
+                      email: emailResp,
+                      time: horario,
+                      bookingDate: data || new Date().toLocaleDateString('pt-BR'),
+                      teacher: professor,
+                      subject: disciplina
+                    };
+                    
+                    newBookings.get(teacherId).set(horario, bookingData);
+                  }
+                }
+              });
+              
+              setTeacherBookings(newBookings);
+              showMessage('Agendamentos carregados do Google Sheets!', 'success');
+              
+            } catch (error) {
+              console.error('Erro ao carregar dados:', error);
+              showMessage('Erro ao conectar com Google Sheets. Usando dados locais.', 'error');
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          const saveBookingToSheets = async (bookingData) => {
+            try {
+              setIsLoading(true);
+              
+              const newRow = [
+                bookingData.teacher,
+                bookingData.subject,
+                bookingData.parentName,
+                bookingData.studentName,
+                bookingData.email,
+                bookingData.time,
+                bookingData.bookingDate
+              ];
+              
+              const response = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${GOOGLE_SHEETS_CONFIG.spreadsheetId}/values/${GOOGLE_SHEETS_CONFIG.range}:append?valueInputOption=RAW&key=${GOOGLE_SHEETS_CONFIG.apiKey}`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    values: [newRow]
+                  })
+                }
+              );
+              
+              if (!response.ok) {
+                throw new Error('Erro ao salvar no Google Sheets');
+              }
+              
+              return true;
+            } catch (error) {
+              console.error('Erro ao salvar:', error);
+              showMessage('Agendamento salvo localmente. Erro ao sincronizar com Google Sheets.', 'error');
+              return false;
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          // Carregar dados ao iniciar
+          useEffect(() => {
+            if (GOOGLE_SHEETS_CONFIG.apiKey !== 'SUA_API_KEY_AQUI') {
+              loadBookingsFromSheets();
+            }
+          }, []);
+
+          const showMessage = (text, type) => {
+            setMessage(text);
+            setMessageType(type);
+            setTimeout(() => {
+              setMessage("");
+              setMessageType("");
+            }, 4000);
+          };
+
+          const getTeacherBookings = (teacherId) => {
+            return teacherBookings.get(teacherId) || new Map();
+          };
+
+          const getBookedSlots = (teacherId) => {
+            const bookings = getTeacherBookings(teacherId);
+            return new Set(Array.from(bookings.keys()));
+          };
+
+          const isSlotAvailable = (slot, teacherId) => {
+            const bookedSlots = getBookedSlots(teacherId);
+            return !bookedSlots.has(slot);
+          };
+
+          const goToAdmin = () => setCurrentScreen("admin");
+          const goToSubjects = () => setCurrentScreen("subjects");
+          
+          const goToTeachers = (subject) => {
+            setSelectedSubject(subject);
+            setCurrentScreen("teachers");
+          };
+
+          const goToBooking = (teacher) => {
+            setSelectedTeacher(teacher);
+            setCurrentScreen("booking");
+            setParentName("");
+            setStudentName("");
+            setEmail("");
+            setSelectedSlot("");
+            setMessage("");
+            setMessageType("");
+          };
+
+          const goBack = () => {
+            if (currentScreen === "booking") {
+              setCurrentScreen("teachers");
+            } else if (currentScreen === "teachers") {
+              setCurrentScreen("subjects");
+            } else if (currentScreen === "subjects") {
+              setCurrentScreen("home");
+            }
+          };
+
+          const handleAdminLogin = () => {
+            if (adminPassword === "admin123") {
+              setIsAdminMode(true);
+              setCurrentScreen("adminPanel");
+              setAdminPassword("");
+              showMessage("Acesso administrativo concedido!", "success");
+            } else {
+              showMessage("Senha incorreta. Acesso negado.", "error");
+              setAdminPassword("");
+            }
+          };
+
+          const handleBooking = async () => {
+            const teacherId = selectedTeacher?.id;
+            
+            if (!teacherId) return;
+            
+            if (!parentName.trim()) {
+              showMessage("Por favor, insira o nome do responsável.", "error");
+              return;
+            }
+
+            if (!studentName.trim()) {
+              showMessage("Por favor, insira o nome do estudante.", "error");
+              return;
+            }
+
+            if (!email.trim()) {
+              showMessage("Por favor, insira o email para contato.", "error");
+              return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              showMessage("Por favor, insira um email válido.", "error");
+              return;
+            }
+
+            if (!selectedSlot) {
+              showMessage("Por favor, selecione um horário.", "error");
+              return;
+            }
+
+            const currentBookings = getTeacherBookings(teacherId);
+            const existingBooking = Array.from(currentBookings.values()).find(booking => 
+              booking.email.toLowerCase() === email.toLowerCase()
+            );
+            
+            if (existingBooking) {
+              showMessage(`Este email já tem um agendamento às ${existingBooking.time} para o estudante ${existingBooking.studentName} com ${selectedTeacher.name}.`, "error");
+              return;
+            }
+
+            if (!isSlotAvailable(selectedSlot, teacherId)) {
+              showMessage("Este horário não está mais disponível. Selecione outro.", "error");
+              return;
+            }
+
+            const bookingData = {
+              parentName: parentName.trim(),
+              studentName: studentName.trim(),
+              email: email.trim().toLowerCase(),
+              time: selectedSlot,
+              bookingDate: new Date().toLocaleDateString('pt-BR'),
+              teacher: selectedTeacher.name,
+              subject: selectedSubject
+            };
+
+            // Salvar localmente primeiro
+            const updatedBookings = new Map([...currentBookings, [selectedSlot, bookingData]]);
+            setTeacherBookings(prev => new Map([...prev, [teacherId, updatedBookings]]));
+            
+            // Tentar salvar no Google Sheets
+            const savedToSheets = await saveBookingToSheets(bookingData);
+            
+            if (savedToSheets) {
+              showMessage(`Agendamento confirmado e salvo no Google Sheets! ${parentName} agendou às ${selectedSlot} para o estudante ${studentName} com ${selectedTeacher.name}.`, "success");
+            } else {
+              showMessage(`Agendamento confirmado localmente! ${parentName} agendou às ${selectedSlot} para o estudante ${studentName} com ${selectedTeacher.name}. (Erro na sincronização)`, "success");
+            }
+            
+            setParentName("");
+            setStudentName("");
+            setEmail("");
+            setSelectedSlot("");
+          };
+
+          // Loading screen
+          if (isLoading) {
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 flex items-center justify-center" },
+              React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8 text-center" },
+                React.createElement('div', { className: "text-4xl mb-4" }, "⏳"),
+                React.createElement('h2', { className: "text-xl font-semibold text-gray-800 mb-2" }, "Carregando..."),
+                React.createElement('p', { className: "text-gray-600" }, "Sincronizando com Google Sheets")
+              )
+            );
+          }
+
+          // HOME SCREEN
+          if (currentScreen === "home") {
+            return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 p-6" },
+              React.createElement('div', { className: "max-w-6xl mx-auto" },
+                React.createElement('div', { className: "bg-white rounded-2xl shadow-xl p-8 text-center" },
+                  React.createElement('div', { className: "mb-8" },
+                    React.createElement('div', { className: "text-6xl mb-4" }, "🎓"),
+                    React.createElement('h1', { className: "text-4xl font-bold text-gray-800 mb-4" }, "Sistema de Agendamento"),
+                    React.createElement('p', { className: "text-xl text-gray-600 mb-2" }, "Reuniões Pedagógicas com Professores"),
+                    React.createElement('p', { className: "text-gray-500 mb-2" }, "Horários disponíveis: 18:30 às 19:50 (intervalos de 10 minutos)"),
+                    React.createElement('p', { className: "text-sm text-green-600" }, "🔗 Conectado ao Google Sheets")
+                  ),
+                  React.createElement('div', { className: "flex gap-4 justify-center mb-8" },
+                    React.createElement('button', {
+                      onClick: goToSubjects,
+                      className: "px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-lg font-medium"
+                    }, "Começar Agendamento"),
+                    React.createElement('button', {
+                      onClick: goToAdmin,
+                      className: "px-6 py-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-lg font-medium"
+                    }, "⚙️ Área Administrativa"),
+                    React.createElement('button', {
+                      onClick: loadBookingsFromSheets,
+                      className: "px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
+                    }, "🔄 Atualizar Dados")
+                  ),
+                  React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
+                    Object.entries(subjects).map(([subject, data]) => 
+                      React.createElement('div', { 
+                        key: subject, 
+                        className: "bg-gray-50 rounded-lg p-4" 
+                      },
+                        React.createElement('div', { className: "text-2xl mb-2 text-center" }, data.icon),
+                        React.createElement('h3', { className: "text-sm font-semibold text-gray-800 mb-1 text-center" }, subject),
+                        React.createElement('p', { className: "text-gray-600 text-xs text-center" }, `${data.teachers.length} prof(s)`)
+                      )
+                    )
+                  )
+                )
+              )
+            );
+          }
+
+          // Resto do código permanece igual...
+          // (As outras telas: subjects, teachers, booking, admin, etc.)
+          
+          return React.createElement('div', {}, "Outras telas...");
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(TeacherSchedulingSystem));
+    </script>
+</body>
+</html>

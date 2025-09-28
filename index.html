@@ -1,206 +1,141 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Agendamento - Professores</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agendamento Professores</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-  <div id="root"></div>
+<div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+<script type="text/babel">
+const { useState } = React;
 
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymljQZ69NpxgNx8Rr9FqomXwhMQGtgolGAZ9IMc4Si7MH8qzsmtwp1wnMlQCEs-Yl1/exec';
+const subjects = {
+  "Língua Portuguesa e Redação": [
+    { id: 1, name: "Profª. Juliana Tricot" },
+    { id: 2, name: "Profª. Juliana Velho" }
+  ],
+  "Matemática": [
+    { id: 3, name: "Profª. Aline" },
+    { id: 4, name: "Profª Eliana" }
+  ]
+  // Adicione os demais professores e matérias...
+};
 
-    function TeacherSchedulingSystem() {
-      const subjects = {
-        "Língua Portuguesa e Redação": {
-          icon: "📚",
-          teachers: [
-            { id: 1, name: "Profª. Juliana Tricot", turmas: ["8º e 9º anos"] },
-            { id: 2, name: "Profª. Juliana Velho", turmas: ["Ensino Médio"] }
-          ]
-        },
-        "Matemática": {
-          icon: "🧮",
-          teachers: [
-            { id: 5, name: "Profª. Aline", turmas: ["7º anos"] },
-            { id: 6, name: "Profª Eliana", turmas: ["5º ano - Manhã"] }
-          ]
-        }
-      };
+const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf4jLyx90AMqnKHQgx8guOJ6hiwBmLjjQBGbgJ_A0Zv51is7A/formResponse";
 
-      const [currentScreen, setCurrentScreen] = useState("home");
-      const [selectedSubject, setSelectedSubject] = useState("");
-      const [selectedTeacher, setSelectedTeacher] = useState(null);
-      const [teacherBookings, setTeacherBookings] = useState(new Map());
-      const [parentName, setParentName] = useState("");
-      const [studentName, setStudentName] = useState("");
-      const [email, setEmail] = useState("");
-      const [selectedSlot, setSelectedSlot] = useState("");
-      const [message, setMessage] = useState("");
-      const [messageType, setMessageType] = useState("");
-      const [isLoading, setIsLoading] = useState(false);
+const fieldIds = {
+  parentName: "Nome do responsável",
+  studentName: "Nome do estudante",
+  email: "E-mail",
+  teacher: "Professor",
+  subject: "Matéria",
+  time: "Horário"
+};
 
-      const generateTimeSlots = () => {
-        const slots = [];
-        let startTime = new Date(); startTime.setHours(18,30,0,0);
-        const endTime = new Date(); endTime.setHours(19,50,0,0);
-        while(startTime<=endTime){
-          slots.push(startTime.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',hour12:false}));
-          startTime.setMinutes(startTime.getMinutes()+10);
-        }
-        return slots;
-      };
-      const timeSlots = generateTimeSlots();
+function generateTimeSlots() {
+  const slots = [];
+  let start = new Date();
+  start.setHours(18, 30, 0, 0);
+  const end = new Date();
+  end.setHours(19, 50, 0, 0);
+  while (start <= end) {
+    slots.push(start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
+    start.setMinutes(start.getMinutes() + 10);
+  }
+  return slots;
+}
 
-      const showMessage = (text,type)=>{
-        setMessage(text); setMessageType(type);
-        setTimeout(()=>{ setMessage(""); setMessageType(""); },4000);
-      };
+function App() {
+  const [step, setStep] = useState(1);
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [parentName, setParentName] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [email, setEmail] = useState("");
+  const timeSlots = generateTimeSlots();
 
-      const loadBookingsFromAppsScript = async ()=>{
-        try{
-          setIsLoading(true);
-          showMessage("Carregando agendamentos...","success");
-          const res = await fetch(APPS_SCRIPT_URL);
-          const data = await res.json();
-          if(!data.success) throw new Error(data.error||"Erro ao carregar");
-
-          const rows = data.data.slice(1);
-          const newBookings = new Map();
-          rows.forEach(row=>{
-            if(row.length>=6){
-              const [teacherName, subject, parent, student, email, time, date] = row;
-              let teacherId=null;
-              Object.values(subjects).some(subj=>{
-                const t = subj.teachers.find(t=>t.name===teacherName);
-                if(t){ teacherId=t.id; return true;} return false;
-              });
-              if(teacherId){
-                if(!newBookings.has(teacherId)) newBookings.set(teacherId,new Map());
-                newBookings.get(teacherId).set(time,{parentName:parent,studentName:student,email,time,teacher:teacherName,subject,date});
-              }
-            }
-          });
-          setTeacherBookings(newBookings);
-          showMessage("Agendamentos carregados!","success");
-        }catch(err){
-          console.error(err);
-          showMessage("Erro ao conectar com planilha","error");
-        }finally{ setIsLoading(false); }
-      };
-
-      const saveBookingToAppsScript = async (booking)=>{
-        try{
-          setIsLoading(true);
-          const res = await fetch(APPS_SCRIPT_URL,{
-            method:"POST",
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify(booking)
-          });
-          const data = await res.json();
-          if(!data.success) throw new Error(data.error||"Erro ao salvar");
-          return true;
-        }catch(err){
-          console.error(err);
-          showMessage("Erro ao salvar na planilha","error");
-          return false;
-        }finally{ setIsLoading(false); }
-      };
-
-      useEffect(()=>{ loadBookingsFromAppsScript(); },[]);
-
-      const getTeacherBookings = (id)=>teacherBookings.get(id)||new Map();
-      const isSlotAvailable = (slot,id)=>!getTeacherBookings(id).has(slot);
-
-      const handleBooking = async ()=>{
-        if(!parentName || !studentName || !email || !selectedSlot){ showMessage("Preencha todos os campos e escolha horário","error"); return; }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if(!emailRegex.test(email)){ showMessage("Email inválido","error"); return; }
-
-        const current=getTeacherBookings(selectedTeacher.id);
-        if(Array.from(current.values()).some(b=>b.email===email)){ showMessage("Este email já possui agendamento","error"); return; }
-        if(!isSlotAvailable(selectedSlot,selectedTeacher.id)){ showMessage("Horário indisponível","error"); return; }
-
-        const booking = { parentName, studentName, email, time:selectedSlot, teacher:selectedTeacher.name, subject:selectedSubject, bookingDate:new Date().toLocaleDateString('pt-BR') };
-        const updated = new Map([...current,[selectedSlot,booking]]);
-        setTeacherBookings(prev=>new Map([...prev,[selectedTeacher.id,updated]]));
-
-        const saved = await saveBookingToAppsScript(booking);
-        showMessage(saved?"Agendamento salvo na planilha!":"Agendamento salvo localmente!", "success");
-
-        setParentName(""); setStudentName(""); setEmail(""); setSelectedSlot("");
-      };
-
-      if(isLoading) return <div className="min-h-screen flex items-center justify-center">⏳ Sincronizando...</div>;
-
-      if(currentScreen==="home") return (
-        <div className="p-6">
-          <h1 className="text-3xl font-bold mb-6 text-center">Sistema de Agendamento</h1>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(subjects).map(([subject,data])=>(
-              <div key={subject} className="p-4 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200" onClick={()=>{setSelectedSubject(subject); setCurrentScreen("teachers");}}>
-                <div className="text-center text-2xl">{data.icon}</div>
-                <h3 className="text-center font-semibold">{subject}</h3>
-              </div>
-            ))}
-          </div>
-          {message && <p className={`mt-4 text-center ${messageType==="success"?"text-green-600":"text-red-600"}`}>{message}</p>}
-        </div>
-      );
-
-      if(currentScreen==="teachers") return (
-        <div className="p-6">
-          <button onClick={()=>setCurrentScreen("home")} className="mb-4">⬅️ Voltar</button>
-          <h2 className="text-2xl font-bold mb-4">{selectedSubject} - Professores</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {subjects[selectedSubject].teachers.map(t=>(
-              <div key={t.id} className="p-4 bg-white rounded-lg shadow cursor-pointer hover:shadow-md" onClick={()=>{setSelectedTeacher(t); setCurrentScreen("booking");}}>
-                <h3 className="font-semibold">{t.name}</h3>
-                <p className="text-sm text-gray-600">{t.turmas.join(", ")}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-      if(currentScreen==="booking") return (
-        <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-xl">
-          <button onClick={()=>setCurrentScreen("teachers")} className="mb-4">⬅️ Voltar</button>
-          <h2 className="text-xl font-bold mb-2">Agendamento com {selectedTeacher.name}</h2>
-          <p className="mb-4 text-gray-600">Disciplina: {selectedSubject}</p>
-
-          <input type="text" placeholder="Nome do responsável" value={parentName} onChange={e=>setParentName(e.target.value)} className="w-full mb-2 p-2 border rounded"/>
-          <input type="text" placeholder="Nome do estudante" value={studentName} onChange={e=>setStudentName(e.target.value)} className="w-full mb-2 p-2 border rounded"/>
-          <input type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full mb-4 p-2 border rounded"/>
-
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {timeSlots.map(slot=>{
-              const available=isSlotAvailable(slot,selectedTeacher.id);
-              return (
-                <button key={slot} disabled={!available} onClick={()=>setSelectedSlot(slot)} className={`p-2 rounded ${selectedSlot===slot?"bg-indigo-600 text-white":available?"bg-green-200":"bg-gray-200 text-gray-400 cursor-not-allowed"}`}>
-                  {slot}
-                </button>
-              )
-            })}
-          </div>
-
-          <button onClick={handleBooking} className="w-full p-3 bg-indigo-600 text-white rounded mb-2">Confirmar Agendamento</button>
-          {message && <p className={`mt-2 text-center ${messageType==="success"?"text-green-600":"text-red-600"}`}>{message}</p>}
-        </div>
-      );
-
-      return null;
+  const handleBooking = async () => {
+    if (!parentName || !studentName || !email || !selectedSlot || !selectedTeacher || !selectedSubject) {
+      alert("Preencha todos os campos!");
+      return;
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<TeacherSchedulingSystem />);
-  </script>
+    const formData = new FormData();
+    formData.append(fieldIds.parentName, parentName);
+    formData.append(fieldIds.studentName, studentName);
+    formData.append(fieldIds.email, email);
+    formData.append(fieldIds.teacher, selectedTeacher.name);
+    formData.append(fieldIds.subject, selectedSubject);
+    formData.append(fieldIds.time, selectedSlot);
+
+    try {
+      await fetch(FORM_URL, { method: "POST", mode: "no-cors", body: formData });
+      alert(`Agendamento confirmado para ${studentName} às ${selectedSlot} com ${selectedTeacher.name}`);
+      setParentName(""); setStudentName(""); setEmail(""); setSelectedSlot(""); setStep(1);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao enviar o agendamento.");
+    }
+  };
+
+  if (step === 1) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Selecione a matéria</h1>
+        {Object.keys(subjects).map(sub => (
+          <button key={sub} className="block mb-2 px-4 py-2 bg-blue-500 text-white rounded" 
+                  onClick={() => { setSelectedSubject(sub); setStep(2); }}>
+            {sub}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (step === 2) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Escolha o professor ({selectedSubject})</h1>
+        {subjects[selectedSubject].map(t => (
+          <button key={t.id} className="block mb-2 px-4 py-2 bg-green-500 text-white rounded"
+                  onClick={() => { setSelectedTeacher(t); setStep(3); }}>
+            {t.name}
+          </button>
+        ))}
+        <button className="mt-4 px-4 py-2 bg-gray-400 rounded" onClick={() => setStep(1)}>Voltar</button>
+      </div>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Preencha os dados e escolha o horário</h1>
+        <input className="block mb-2 p-2 border" placeholder="Nome do responsável" value={parentName} onChange={e => setParentName(e.target.value)} />
+        <input className="block mb-2 p-2 border" placeholder="Nome do estudante" value={studentName} onChange={e => setStudentName(e.target.value)} />
+        <input className="block mb-2 p-2 border" placeholder="E-mail" value={email} onChange={e => setEmail(e.target.value)} />
+        <select className="block mb-2 p-2 border" value={selectedSlot} onChange={e => setSelectedSlot(e.target.value)}>
+          <option value="">Selecione um horário</option>
+          {timeSlots.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+        </select>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleBooking}>Confirmar Agendamento</button>
+        <button className="mt-2 px-4 py-2 bg-gray-400 rounded" onClick={() => setStep(2)}>Voltar</button>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
-

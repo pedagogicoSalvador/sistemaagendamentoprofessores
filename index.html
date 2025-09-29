@@ -195,28 +195,32 @@
           </form>
 
           <h2 className="text-xl font-semibold mb-4">📋 Agendamentos já feitos</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300 text-sm">
-              <thead>
-                <tr className="bg-gray-200">
-                  {agendamentos.length > 0 &&
-                    Object.keys(agendamentos[0]).map(col => (
-                      <th key={col} className="border border-gray-300 px-2 py-1">{col}</th>
-                    ))}
-                </tr>
-              </thead>
-              <tbody>
-                {agendamentos.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-gray-100">
-                    {Object.values(row).map((val, i) => (
-                      <td key={i} className="border border-gray-300 px-2 py-1">{val}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+<div className="overflow-x-auto">
+  <table className="w-full border-collapse border border-gray-300 text-sm">
+    <thead>
+      <tr className="bg-gray-200">
+        <th className="border border-gray-300 px-2 py-1">Nome do Responsável</th>
+        <th className="border border-gray-300 px-2 py-1">Nome do Estudante</th>
+        <th className="border border-gray-300 px-2 py-1">E-mail</th>
+        <th className="border border-gray-300 px-2 py-1">Professor</th>
+        <th className="border border-gray-300 px-2 py-1">Matéria</th>
+        <th className="border border-gray-300 px-2 py-1">Horário</th>
+      </tr>
+    </thead>
+    <tbody>
+      {agendamentos.map((row, idx) => (
+        <tr key={idx} className="hover:bg-gray-100">
+          <td className="border border-gray-300 px-2 py-1">{row["Nome do Responsável"]}</td>
+          <td className="border border-gray-300 px-2 py-1">{row["Nome do Estudante"]}</td>
+          <td className="border border-gray-300 px-2 py-1">{row["Endereço de e-mail"]}</td>
+          <td className="border border-gray-300 px-2 py-1">{row["Professor"]}</td>
+          <td className="border border-gray-300 px-2 py-1">{row["Matéria"]}</td>
+          <td className="border border-gray-300 px-2 py-1">{row["Horário"]}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
       );
     }
 
@@ -224,3 +228,4 @@
   </script>
 </body>
 </html>
+

@@ -1,157 +1,226 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Agendamento Escolar</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  </head>
-  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div id="root"></div>
+<head>
+  <meta charset="UTF-8" />
+  <title>Agendamento Escolar</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div id="root"></div>
 
-    <script type="text/babel">
-      const FORM_ACTION_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf4jLyx90AMqnKHQgx8guOJ6hiwBmLjjQBGbgJ_A0Zv51is7A/formResponse";
+  <script type="text/babel">
+    const FORM_ACTION_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf4jLyx90AMqnKHQgx8guOJ6hiwBmLjjQBGbgJ_A0Zv51is7A/formResponse";
 
-      // IDs do Google Form
-      const fieldIds = {
-        parentName: "entry.1166068656",   // Nome do Responsável
-        studentName: "entry.868919622",   // Nome do Estudante
-        email: "entry.271423025",         // E-mail
-        teacher: "entry.623842367",       // Professor
-        subject: "entry.1476623994",      // Matéria
-        timeHour: "entry.2070589296_hour",   // Horário (hora)
-        timeMinute: "entry.2070589296_minute" // Horário (minuto)
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR1zqWi9g9zsfRGQaKfVtztoVnzKupn-8-s_hjMO020b97ZQ3whPnx2dj5WfJtM-AntQnQlOzhw8y4T/pub?gid=1266628827&single=true&output=csv";
+
+    const fieldIds = {
+      parentName: "entry.1166068656",
+      studentName: "entry.868919622",
+      email: "entry.271423025",
+      teacher: "entry.623842367",
+      subject: "entry.1476623994",
+      timeHour: "entry.2070589296_hour",
+      timeMinute: "entry.2070589296_minute"
+    };
+
+    function App() {
+      const [formData, setFormData] = React.useState({
+        parentName: "",
+        studentName: "",
+        email: "",
+        teacher: "",
+        subject: "",
+        time: ""
+      });
+      const [agendamentos, setAgendamentos] = React.useState([]);
+
+      const teachers = ["Prof. Carlos", "Profa. Ana", "Profa. Júlia"];
+      const subjects = ["Matemática", "Português", "Ciências"];
+      const times = ["08:00", "09:00", "10:30", "14:00", "15:30"];
+
+      const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
       };
 
-      function App() {
-        const [formData, setFormData] = React.useState({
-          parentName: "",
-          studentName: "",
-          email: "",
-          teacher: "",
-          subject: "",
-          time: ""
-        });
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+          const [hour, minute] = formData.time.split(":");
 
-        const teachers = ["Prof. Carlos", "Profa. Ana", "Profa. Júlia"];
-        const subjects = ["Matemática", "Português", "Ciências"];
-        const times = ["08:00", "09:00", "10:30", "14:00", "15:30"];
+          const form = new FormData();
+          form.append(fieldIds.parentName, formData.parentName);
+          form.append(fieldIds.studentName, formData.studentName);
+          form.append(fieldIds.email, formData.email);
+          form.append(fieldIds.teacher, formData.teacher);
+          form.append(fieldIds.subject, formData.subject);
+          form.append(fieldIds.timeHour, hour);
+          form.append(fieldIds.timeMinute, minute);
 
-        const handleChange = (e) => {
-          const { name, value } = e.target;
-          setFormData((prev) => ({ ...prev, [name]: value }));
-        };
+          await fetch(FORM_ACTION_URL, {
+            method: "POST",
+            body: form,
+            mode: "no-cors"
+          });
 
-        const handleSubmit = async (e) => {
-          e.preventDefault();
-          try {
-            const [hour, minute] = formData.time.split(":");
+          alert("✅ Agendamento enviado com sucesso!");
+          setFormData({
+            parentName: "",
+            studentName: "",
+            email: "",
+            teacher: "",
+            subject: "",
+            time: ""
+          });
 
-            const form = new FormData();
-            form.append(fieldIds.parentName, formData.parentName);
-            form.append(fieldIds.studentName, formData.studentName);
-            form.append(fieldIds.email, formData.email);
-            form.append(fieldIds.teacher, formData.teacher);
-            form.append(fieldIds.subject, formData.subject);
-            form.append(fieldIds.timeHour, hour);
-            form.append(fieldIds.timeMinute, minute);
+          fetchAgendamentos();
 
-            await fetch(FORM_ACTION_URL, {
-              method: "POST",
-              body: form,
-              mode: "no-cors" // ignora CORS
-            });
+        } catch (err) {
+          console.error("Erro:", err);
+          alert("❌ Erro ao salvar agendamento.");
+        }
+      };
 
-            alert("✅ Agendamento enviado com sucesso!");
-            setFormData({
-              parentName: "",
-              studentName: "",
-              email: "",
-              teacher: "",
-              subject: "",
-              time: ""
-            });
-          } catch (err) {
-            console.error("Erro:", err);
-            alert("❌ Erro ao salvar agendamento.");
+      const fetchAgendamentos = async () => {
+        try {
+          const res = await fetch(SHEET_CSV_URL);
+          const text = await res.text();
+
+          const rows = text.split("\n").map(r => r.split(","));
+          if (rows.length < 2) {
+            setAgendamentos([]);
+            return;
           }
-        };
+          const headers = rows[0].map(h => h.trim());
+          const data = rows.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => {
+              obj[h] = row[i]?.trim();
+            });
+            return obj;
+          });
 
-        return (
-          <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg">
-            <h1 className="text-2xl font-bold mb-6 text-center text-gray-700">Agendamento Escolar</h1>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input
-                type="text"
-                name="parentName"
-                value={formData.parentName}
-                onChange={handleChange}
-                placeholder="Nome do Responsável"
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              />
-              <input
-                type="text"
-                name="studentName"
-                value={formData.studentName}
-                onChange={handleChange}
-                placeholder="Nome do Estudante"
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="E-mail"
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              />
-              <select
-                name="teacher"
-                value={formData.teacher}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              >
-                <option value="">Selecione o Professor</option>
-                {teachers.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <select
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              >
-                <option value="">Selecione a Matéria</option>
-                {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                className="w-full border rounded-lg px-3 py-2"
-                required
-              >
-                <option value="">Selecione o Horário</option>
-                {times.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-              >
-                Enviar Agendamento
-              </button>
-            </form>
+          // Remover linha vazia final (se existir)
+          const cleaned = data.filter(r => r[headers[0]] && r[headers[0]].length > 0);
+
+          setAgendamentos(cleaned);
+        } catch (err) {
+          console.error("Erro ao carregar planilha:", err);
+        }
+      };
+
+      React.useEffect(() => {
+        fetchAgendamentos();
+      }, []);
+
+      return (
+        <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-4xl">
+          <h1 className="text-2xl font-bold mb-6 text-center text-gray-700">Agendamento Escolar</h1>
+          <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+            <input
+              type="text"
+              name="parentName"
+              value={formData.parentName}
+              onChange={handleChange}
+              placeholder="Nome do Responsável"
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            />
+            <input
+              type="text"
+              name="studentName"
+              value={formData.studentName}
+              onChange={handleChange}
+              placeholder="Nome do Estudante"
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="E-mail"
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            />
+            <select
+              name="teacher"
+              value={formData.teacher}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            >
+              <option value="">Selecione o Professor</option>
+              {teachers.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <select
+              name="subject"
+              value={formData.subject}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            >
+              <option value="">Selecione a Matéria</option>
+              {subjects.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              name="time"
+              value={formData.time}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2"
+              required
+            >
+              <option value="">Selecione o Horário</option>
+              {times.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Enviar Agendamento
+            </button>
+          </form>
+
+          <h2 className="text-xl font-semibold mb-4">📋 Agendamentos já feitos</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse border border-gray-300 text-sm">
+              <thead>
+                <tr className="bg-gray-200">
+                  {agendamentos.length > 0 &&
+                    Object.keys(agendamentos[0]).map(col => (
+                      <th key={col} className="border border-gray-300 px-2 py-1">{col}</th>
+                    ))}
+                </tr>
+              </thead>
+              <tbody>
+                {agendamentos.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-gray-100">
+                    {Object.values(row).map((val, i) => (
+                      <td key={i} className="border border-gray-300 px-2 py-1">{val}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        );
-      }
+        </div>
+      );
+    }
 
-      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-    </script>
-  </body>
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
 </html>
